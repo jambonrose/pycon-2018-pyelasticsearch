@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
 
 from searchapp.constants import DOC_TYPE, INDEX_NAME
 from searchapp.data import all_products, ProductData
@@ -17,7 +18,21 @@ def main():
         },
     )
 
-    index_product(es, all_products()[0])
+    bulk(es, actions=(
+        {
+            '_op_type': 'index',
+            '_id': product.id,
+            '_index': INDEX_NAME,
+            '_type': DOC_TYPE,
+            '_source': {
+                'name': product.name,
+                'description': product.description,
+                'image': product.image,
+                'taxonomy': product.taxonomy,
+                'price': product.price,
+            },
+        } for product in all_products()),
+    )
 
 
 def index_product(es, product: ProductData):
@@ -26,16 +41,18 @@ def index_product(es, product: ProductData):
     es.create(
         index=INDEX_NAME,
         doc_type=DOC_TYPE,
-        id=1,
+        id=product.id,
         body={
-            "name": "A Great Product",
-            "image": "http://placekitten.com/200/200",
+            "name": product.name,
+            "description": product.description,
+            "image": product.image,
+            "taxonomy": product.taxonomy,
+            "price": product.price,
         }
     )
 
-    # Don't delete this! You'll need it to see if your indexing job is working,
-    # or if it has stalled.
-    print("Indexed {}".format("A Great Product"))
+    # yay logging! Don't delete!
+    print(f'Indexed {product.name}')
 
 
 if __name__ == '__main__':
